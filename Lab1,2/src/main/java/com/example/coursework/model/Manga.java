@@ -19,11 +19,13 @@ public class Manga extends Publication{
     private Demographic demographic;
     private String illustrator;
     private int volume;
+    private boolean colored;
 
-    public Manga(String title, String description, Language language, Demographic demographic, String illustrator, int volume) {
+    public Manga(String title, String description, Language language, Demographic demographic, String illustrator, int volume, boolean colored) {
         super(title, description, language);
         this.demographic = demographic;
         this.illustrator = illustrator;
         this.volume = volume;
+        this.colored = colored;
     }
 }

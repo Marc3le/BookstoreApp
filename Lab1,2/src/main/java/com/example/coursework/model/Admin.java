@@ -12,10 +12,22 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 public class Admin extends User{
-    //TODO This class is incomplete, You need to add attributes and constructors. Also override toString method
     private String phoneNum;
 
     public Admin(String login, String password, String name, String surname, String email) {
         super(login, password, name, surname, email);
+    }
+
+    @Override
+    public String toString() {
+        return "Admin{" +
+                "id=" + getId() +
+                ", login='" + getLogin() + '\'' +
+                ", name='" + getName() + '\'' +
+                ", surname='" + getSurname() + '\'' +
+                ", email='" + getEmail() + '\'' +
+                ", phoneNum='" + phoneNum + '\'' +
+                ", dateCreated=" + getDateCreated() +
+                '}';
     }
 }

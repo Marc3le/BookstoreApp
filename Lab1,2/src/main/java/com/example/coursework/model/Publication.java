@@ -1,6 +1,7 @@
 package com.example.coursework.model;
 
 import com.example.coursework.model.enums.Language;
+import com.example.coursework.model.enums.PublicationStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -27,6 +28,11 @@ public class Publication {
     protected LocalDate dateCreated;
     @Enumerated
     protected Language language;
+    @Enumerated(EnumType.STRING)
+    private PublicationStatus status = PublicationStatus.AVAILABLE;
+    
+    @ManyToOne
+    private User owner;
 
     public Publication(String title, String description, Language language) {
         this.title = title;
@@ -34,6 +40,14 @@ public class Publication {
         this.language = language;
         this.dateCreated = LocalDate.now();
         this.commentList = new ArrayList<>();
+    }
+
+    public PublicationStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(PublicationStatus status) {
+        this.status = status;
     }
 
     @Override

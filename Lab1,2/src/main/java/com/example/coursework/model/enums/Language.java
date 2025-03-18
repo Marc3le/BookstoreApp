@@ -1,6 +1,17 @@
 package com.example.coursework.model.enums;
 
 public enum Language {
-    //TODO Add more relevant languages
-    LITHUANIAN, ENGLISH, JAPANESE
+    LITHUANIAN,
+    ENGLISH,
+    JAPANESE,
+    GERMAN,
+    FRENCH,
+    SPANISH,
+    CHINESE,
+    KOREAN,
+    POLISH,
+    LATVIAN,
+    ESTONIAN,
+    GREEK,
+    ARABIC,
 }

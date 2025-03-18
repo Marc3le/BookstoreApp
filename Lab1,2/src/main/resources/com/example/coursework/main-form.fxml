@@ -17,8 +17,11 @@
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.control.TreeView?>
 <?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Text?>
 
-<AnchorPane prefHeight="493.0" prefWidth="694.0" xmlns="http://javafx.com/javafx/16" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.coursework.fxControllers.MainForm">
+<AnchorPane prefHeight="493.0" prefWidth="694.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.coursework.fxControllers.MainForm">
    <children>
       <MenuBar layoutX="2.0" layoutY="2.0" prefHeight="26.0" prefWidth="594.0">
         <menus>
@@ -45,11 +48,46 @@
             <content>
               <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
                      <children>
-                        <ListView layoutX="14.0" layoutY="14.0" prefHeight="317.0" prefWidth="182.0" />
-                        <TextArea layoutX="206.0" layoutY="14.0" prefHeight="148.0" prefWidth="382.0" />
-                        <TreeView layoutX="206.0" layoutY="173.0" prefHeight="120.0" prefWidth="382.0" />
-                        <Button layoutX="206.0" layoutY="307.0" mnemonicParsing="false" text="Leave a review" />
-                        <Button layoutX="516.0" layoutY="307.0" mnemonicParsing="false" text="Request" />
+                        <TextField fx:id="searchField" layoutX="14.0" layoutY="14.0" prefWidth="574.0" promptText="Search publications..." />
+                        <HBox layoutX="14.0" layoutY="50.0" spacing="10">
+                            <VBox spacing="5">
+                                <Label text="Publication type" />
+                                <HBox spacing="10">
+                                    <RadioButton fx:id="filterBookRadio" text="Book" selected="true">
+                                        <toggleGroup>
+                                            <ToggleGroup fx:id="filterPublicationType" />
+                                        </toggleGroup>
+                                    </RadioButton>
+                                    <RadioButton fx:id="filterMangaRadio" text="Manga" toggleGroup="$filterPublicationType" />
+                                </HBox>
+                            </VBox>
+                            <VBox>
+                                <Label text="Filter by status" />
+                                <ChoiceBox fx:id="statusFilter" prefWidth="140.0" />
+                            </VBox>
+                            <VBox>
+                                <Label text="Filter by language" />
+                                <ChoiceBox fx:id="languageFilter" prefWidth="140.0" />
+                            </VBox>
+                            <VBox fx:id="bookFiltersBox">
+                                <Label text="Filter by genre" />
+                                <ChoiceBox fx:id="genreFilter" prefWidth="140.0" />
+                            </VBox>
+                            <VBox fx:id="mangaFiltersBox">
+                                <Label text="Filter by demographic" />
+                                <ChoiceBox fx:id="demographicFilter" prefWidth="140.0" />
+                            </VBox>
+                        </HBox>
+                        <ListView fx:id="allPublicationsListView" layoutX="14.0" layoutY="111.0" prefHeight="282.0" prefWidth="280.0" />
+                        <VBox layoutX="304.0" layoutY="90.0" spacing="10">
+                            <children>
+                                <HBox spacing="20" />
+                            </children>
+                        </VBox>
+                          <TextArea fx:id="selectedPublicationDetails" editable="false" layoutX="304.0" layoutY="234.0" prefHeight="157.0" prefWidth="370.0" wrapText="true" />
+                           <Button layoutX="14.0" layoutY="398.0" mnemonicParsing="false" onAction="#leaveReview" text="Leave a review" />
+                           <Button layoutX="113.0" layoutY="398.0" mnemonicParsing="false" onAction="#requestPublication" text="Request" />
+                          <TreeView fx:id="commentsTreeView" layoutX="304.0" layoutY="111.0" prefHeight="120.0" prefWidth="370.0" />
                      </children>
                   </AnchorPane>
             </content>
@@ -78,16 +116,23 @@
                         </RadioButton>
                         <RadioButton fx:id="myPublicationMangaRadio" layoutX="316.0" layoutY="23.0" mnemonicParsing="false" onAction="#disableFields" text="Manga" toggleGroup="$publicationType" />
                         <TextField fx:id="myPublicationTitleField" layoutX="214.0" layoutY="57.0" prefHeight="26.0" prefWidth="173.0" promptText="Title" />
-                        <TextArea fx:id="myPublicationDescriptionField" layoutX="215.0" layoutY="91.0" prefHeight="102.0" prefWidth="173.0" promptText="Desciption" />
-                        <TextArea fx:id="myPublicationAuthorField" layoutX="217.0" layoutY="271.0" prefHeight="94.0" prefWidth="172.0" promptText="Authors" />
+                        <TextArea fx:id="myPublicationDescriptionField" layoutX="215.0" layoutY="91.0" prefHeight="102.0" prefWidth="173.0" promptText="Description" />
+                        <TextArea fx:id="myPublicationAuthorField" layoutX="217.0" layoutY="271.0" prefHeight="58.0" prefWidth="172.0" promptText="Authors" />
                         <TextField fx:id="myPublicationIsbnField" layoutX="216.0" layoutY="205.0" prefHeight="26.0" prefWidth="171.0" promptText="ISBN" />
                         <DatePicker fx:id="mysPublicationYearField" layoutX="217.0" layoutY="240.0" promptText="Publish date" />
                         <ChoiceBox fx:id="myPublicationLanguageField" layoutX="415.0" layoutY="58.0" prefWidth="150.0" />
                         <ChoiceBox fx:id="myPublicationGenreField" layoutX="415.0" layoutY="101.0" prefWidth="150.0" />
                         <ChoiceBox fx:id="demographicField" layoutX="415.0" layoutY="142.0" prefWidth="150.0" />
                         <TextField fx:id="illustratorField" layoutX="416.0" layoutY="181.0" promptText="Illustrator" />
-                        <TextField fx:id="volumeField" layoutX="416.0" layoutY="219.0" promptText="Manga volumen No" />
+                        <TextField fx:id="volumeField" layoutX="416.0" layoutY="219.0" promptText="Manga volume No" />
                         <CheckBox fx:id="isMangaColoredField" layoutX="416.0" layoutY="257.0" mnemonicParsing="false" text="is colored" />
+                        <Text layoutX="578.0" layoutY="75.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Language" />
+                        <Text layoutX="578.0" layoutY="119.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Genre" />
+                        <Text layoutX="578.0" layoutY="160.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Demographics" />
+                        <Button fx:id="markAvailableButton" layoutX="215.0" layoutY="347.0" mnemonicParsing="false" text="Mark Available" />
+                        <Button fx:id="markBorrowedButton" layoutX="317.0" layoutY="347.0" mnemonicParsing="false" text="Mark Borrowed" />
+                        <Button fx:id="markReservedButton" layoutX="500.0" layoutY="347.0" mnemonicParsing="false" text="Mark Reserved" />
+                        <Button fx:id="markSoldButton" layoutX="421.0" layoutY="347.0" mnemonicParsing="false" text="Mark Sold" />
                      </children>
                   </AnchorPane>
               </content>

@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -18,7 +19,6 @@ import java.util.List;
 @AllArgsConstructor
 @Entity
 public final class Client extends User {
-    //TODO This class is incomplete, You need to add attributes and constructors. Also override toString method
     private String address;
     private LocalDate birthDate;
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
@@ -28,5 +28,21 @@ public final class Client extends User {
         super(login, password, name, surname, email);
         this.address = address;
         this.birthDate = birthDate;
+        this.myComments = new ArrayList<>();
+    }
+
+    @Override
+    public String toString() {
+        return "Client{" +
+                "id=" + getId() +
+                ", login='" + getLogin() + '\'' +
+                ", name='" + getName() + '\'' +
+                ", surname='" + getSurname() + '\'' +
+                ", email='" + getEmail() + '\'' +
+                ", address='" + address + '\'' +
+                ", birthDate=" + birthDate +
+                ", dateCreated=" + getDateCreated() +
+                ", commentsCount=" + (myComments != null ? myComments.size() : 0) +
+                '}';
     }
 }
