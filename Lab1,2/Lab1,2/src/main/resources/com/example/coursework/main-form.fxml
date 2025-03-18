@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.control.TreeView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.text.Text?>
+
+<AnchorPane prefHeight="493.0" prefWidth="694.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.coursework.fxControllers.MainForm">
+   <children>
+      <MenuBar layoutX="2.0" layoutY="2.0" prefHeight="26.0" prefWidth="594.0">
+        <menus>
+          <Menu mnemonicParsing="false" text="File">
+            <items>
+              <MenuItem mnemonicParsing="false" text="Close" />
+            </items>
+          </Menu>
+          <Menu mnemonicParsing="false" text="Edit">
+            <items>
+              <MenuItem mnemonicParsing="false" text="Delete" />
+            </items>
+          </Menu>
+          <Menu mnemonicParsing="false" text="Help">
+            <items>
+              <MenuItem mnemonicParsing="false" text="About" />
+            </items>
+          </Menu>
+        </menus>
+      </MenuBar>
+      <TabPane layoutX="2.0" layoutY="28.0" prefHeight="466.0" prefWidth="694.0" tabClosingPolicy="UNAVAILABLE">
+        <tabs>
+          <Tab text="Book exchange">
+            <content>
+              <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                     <children>
+                        <ListView layoutX="14.0" layoutY="14.0" prefHeight="317.0" prefWidth="182.0" />
+                        <TextArea layoutX="206.0" layoutY="14.0" prefHeight="148.0" prefWidth="382.0" />
+                        <TreeView layoutX="206.0" layoutY="173.0" prefHeight="120.0" prefWidth="382.0" />
+                        <Button layoutX="206.0" layoutY="307.0" mnemonicParsing="false" text="Leave a review" />
+                        <Button layoutX="516.0" layoutY="307.0" mnemonicParsing="false" text="Request" />
+                     </children>
+                  </AnchorPane>
+            </content>
+          </Tab>
+          <Tab text="Users">
+            <content>
+              <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                     <children>
+                        <Button layoutX="35.0" layoutY="24.0" mnemonicParsing="false" onAction="#loadRegForm" text="Create new" />
+                     </children></AnchorPane>
+            </content>
+          </Tab>
+            <Tab text="My publications">
+              <content>
+                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                     <children>
+                        <ListView fx:id="myPublicationListField" layoutX="14.0" layoutY="23.0" onMouseClicked="#loadSelectedPublication" prefHeight="406.0" prefWidth="190.0" />
+                        <Label layoutX="14.0" layoutY="5.0" text="My uploads" />
+                        <Button layoutX="215.0" layoutY="398.0" mnemonicParsing="false" onAction="#createNewPublication" text="Add new" />
+                        <Button layoutX="387.0" layoutY="398.0" mnemonicParsing="false" onAction="#updatePublication" text="Update" />
+                        <Button layoutX="578.0" layoutY="398.0" mnemonicParsing="false" onAction="#deletePublication" text="Delete" />
+                        <RadioButton fx:id="myPublicationBookRadio" layoutX="223.0" layoutY="22.0" mnemonicParsing="false" onAction="#disableFields" selected="true" text="Book">
+                           <toggleGroup>
+                              <ToggleGroup fx:id="publicationType" />
+                           </toggleGroup>
+                        </RadioButton>
+                        <RadioButton fx:id="myPublicationMangaRadio" layoutX="316.0" layoutY="23.0" mnemonicParsing="false" onAction="#disableFields" text="Manga" toggleGroup="$publicationType" />
+                        <TextField fx:id="myPublicationTitleField" layoutX="214.0" layoutY="57.0" prefHeight="26.0" prefWidth="173.0" promptText="Title" />
+                        <TextArea fx:id="myPublicationDescriptionField" layoutX="215.0" layoutY="91.0" prefHeight="102.0" prefWidth="173.0" promptText="Desciption" />
+                        <TextArea fx:id="myPublicationAuthorField" layoutX="217.0" layoutY="271.0" prefHeight="94.0" prefWidth="172.0" promptText="Authors" />
+                        <TextField fx:id="myPublicationIsbnField" layoutX="216.0" layoutY="205.0" prefHeight="26.0" prefWidth="171.0" promptText="ISBN" />
+                        <DatePicker fx:id="mysPublicationYearField" layoutX="217.0" layoutY="240.0" promptText="Publish date" />
+                        <ChoiceBox fx:id="myPublicationLanguageField" layoutX="415.0" layoutY="58.0" prefWidth="150.0" />
+                        <ChoiceBox fx:id="myPublicationGenreField" layoutX="415.0" layoutY="101.0" prefWidth="150.0" />
+                        <ChoiceBox fx:id="demographicField" layoutX="415.0" layoutY="142.0" prefWidth="150.0" />
+                        <TextField fx:id="illustratorField" layoutX="416.0" layoutY="181.0" promptText="Illustrator" />
+                        <TextField fx:id="volumeField" layoutX="416.0" layoutY="219.0" promptText="Manga volumen No" />
+                        <CheckBox fx:id="isMangaColoredField" layoutX="416.0" layoutY="257.0" mnemonicParsing="false" text="is colored" />
+                        <Text layoutX="578.0" layoutY="75.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Language" />
+                        <Text layoutX="578.0" layoutY="119.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Genre" />
+                        <Text layoutX="578.0" layoutY="160.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Demographics" />
+                     </children>
+                  </AnchorPane>
+              </content>
+            </Tab>
+        </tabs>
+      </TabPane>
+   </children>
+</AnchorPane>
