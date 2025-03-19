@@ -20,24 +20,25 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Text?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.PasswordField?>
 
 <AnchorPane prefHeight="493.0" prefWidth="694.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.coursework.fxControllers.MainForm">
    <children>
       <MenuBar layoutX="2.0" layoutY="2.0" prefHeight="26.0" prefWidth="594.0">
         <menus>
-          <Menu mnemonicParsing="false" text="File">
+          <Menu text="File">
             <items>
-              <MenuItem mnemonicParsing="false" text="Close" />
+              <MenuItem text="Register" onAction="#loadRegForm"/>
+              <MenuItem text="Close"/>
             </items>
           </Menu>
-          <Menu mnemonicParsing="false" text="Edit">
+          <Menu text="Help">
             <items>
-              <MenuItem mnemonicParsing="false" text="Delete" />
-            </items>
-          </Menu>
-          <Menu mnemonicParsing="false" text="Help">
-            <items>
-              <MenuItem mnemonicParsing="false" text="About" />
+              <MenuItem text="About"/>
             </items>
           </Menu>
         </menus>
@@ -53,7 +54,7 @@
                             <VBox spacing="5">
                                 <Label text="Publication type" />
                                 <HBox spacing="10">
-                                    <RadioButton fx:id="filterBookRadio" text="Book" selected="true">
+                                    <RadioButton fx:id="filterBookRadio" selected="true" text="Book">
                                         <toggleGroup>
                                             <ToggleGroup fx:id="filterPublicationType" />
                                         </toggleGroup>
@@ -84,10 +85,16 @@
                                 <HBox spacing="20" />
                             </children>
                         </VBox>
-                          <TextArea fx:id="selectedPublicationDetails" editable="false" layoutX="304.0" layoutY="234.0" prefHeight="157.0" prefWidth="370.0" wrapText="true" />
-                           <Button layoutX="14.0" layoutY="398.0" mnemonicParsing="false" onAction="#leaveReview" text="Leave a review" />
-                           <Button layoutX="113.0" layoutY="398.0" mnemonicParsing="false" onAction="#requestPublication" text="Request" />
-                          <TreeView fx:id="commentsTreeView" layoutX="304.0" layoutY="111.0" prefHeight="120.0" prefWidth="370.0" />
+                          <TextArea fx:id="selectedPublicationDetails" editable="false" layoutX="301.0" layoutY="111.0" prefHeight="157.0" prefWidth="370.0" wrapText="true" />
+                          <Button layoutX="14.0" layoutY="398.0" mnemonicParsing="false" onAction="#leaveReview" text="Leave a review" />
+                          <Button layoutX="113.0" layoutY="398.0" mnemonicParsing="false" onAction="#requestPublication" text="Request" />
+                          <TreeView fx:id="commentsTreeView" layoutX="301.0" layoutY="273.0" prefHeight="120.0" prefWidth="370.0" />
+                          <HBox layoutX="301.0" layoutY="398.0" spacing="10">
+                              <Button fx:id="editCommentButton" text="Edit Comment" onAction="#handleEditComment" />
+                              <Button fx:id="deleteCommentButton" text="Delete Comment" onAction="#handleDeleteComment" />
+                          </HBox>
+                          <TextArea fx:id="editCommentText" layoutX="301.0" layoutY="433.0" prefHeight="60.0" prefWidth="370.0" wrapText="true" />
+                          <Button layoutX="301.0" layoutY="498.0" text="Save Edit" onAction="#handleSaveEdit" />
                      </children>
                   </AnchorPane>
             </content>
@@ -95,9 +102,66 @@
           <Tab text="Users">
             <content>
               <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
-                     <children>
-                        <Button layoutX="35.0" layoutY="24.0" mnemonicParsing="false" onAction="#loadRegForm" text="Create new" />
-                     </children></AnchorPane>
+                <children>
+                    <VBox spacing="10" AnchorPane.leftAnchor="10" AnchorPane.rightAnchor="10" AnchorPane.topAnchor="10" AnchorPane.bottomAnchor="10">
+                        <HBox spacing="10">
+                            <TableView fx:id="userTable" VBox.vgrow="ALWAYS" prefHeight="250">
+                                <columns>
+                                    <TableColumn fx:id="loginColumn" text="Login"/>
+                                    <TableColumn fx:id="nameColumn" text="Name"/>
+                                    <TableColumn fx:id="surnameColumn" text="Surname"/>
+                                    <TableColumn fx:id="emailColumn" text="Email"/>
+                                    <TableColumn fx:id="phoneColumn" text="Phone"/>
+                                    <TableColumn fx:id="roleColumn" text="Role"/>
+                                </columns>
+                            </TableView>
+                        </HBox>
+
+                        <VBox spacing="10">
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <Label text="Login:"/>
+                                <TextField fx:id="loginField"/>
+                            </HBox>
+
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <Label text="Name:"/>
+                                <TextField fx:id="nameField"/>
+                            </HBox>
+
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <Label text="Surname:"/>
+                                <TextField fx:id="surnameField"/>
+                            </HBox>
+
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <Label text="Email:"/>
+                                <TextField fx:id="emailField"/>
+                            </HBox>
+
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <Label text="Phone:"/>
+                                <TextField fx:id="phoneField"/>
+                            </HBox>
+
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <Label text="Role:"/>
+                                <ComboBox fx:id="roleComboBox"/>
+                            </HBox>
+
+                            <HBox spacing="10" alignment="CENTER_LEFT">
+                                <Label text="Password:"/>
+                                <PasswordField fx:id="passwordField"/>
+                            </HBox>
+                        </VBox>
+
+                        <HBox spacing="10" alignment="CENTER_RIGHT">
+                            <Button fx:id="newButton" text="Add User" onAction="#createNewUser"/>
+                            <Button fx:id="saveButton" text="Save Changes" onAction="#handleSave"/>
+                            <Button fx:id="deleteButton" text="Delete User" onAction="#handleDelete"/>
+                        </HBox>
+                    </VBox>
+                </children>
+              </AnchorPane>
             </content>
           </Tab>
             <Tab text="My publications">

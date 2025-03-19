@@ -37,9 +37,26 @@ public class RegistrationForm {
 
     private EntityManagerFactory entityManagerFactory;
     private boolean isClient = true;
+    private boolean adminMode = false;
 
     public void setData(EntityManagerFactory entityManagerFactory) {
         this.entityManagerFactory = entityManagerFactory;
+        setupForm();
+    }
+
+    public void setAdminMode(boolean adminMode) {
+        this.adminMode = adminMode;
+        if (adminMode) {
+            // In admin mode, show both radio buttons
+            clientRadio.setVisible(true);
+            adminRadio.setVisible(true);
+        } else {
+            // In regular mode, only allow client registration
+            clientRadio.setSelected(true);
+            clientRadio.setVisible(false);
+            adminRadio.setVisible(false);
+            isClient = true;
+        }
         setupForm();
     }
 
@@ -51,12 +68,12 @@ public class RegistrationForm {
 
     private void setupForm() {
         if (isClient) {
-            titleLabel.setText("Register New Client");
+            titleLabel.setText(adminMode ? "Create New Client" : "Register New Client");
             phoneField.setVisible(false);
             addressField.setVisible(true);
             birthDateField.setVisible(true);
         } else {
-            titleLabel.setText("Register New Admin");
+            titleLabel.setText("Create New Admin");
             phoneField.setVisible(true);
             addressField.setVisible(false);
             birthDateField.setVisible(false);

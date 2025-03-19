@@ -15,8 +15,7 @@ public class CustomHibernate extends GenericHibernate {
     public User getUserByLoginAndPsw(String login, String password) {
         User user = null;
         try {
-            entityManager = createEntityManager();
-            CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+            CriteriaBuilder criteriaBuilder = getEntityManager().getCriteriaBuilder();
             CriteriaQuery<User> query = criteriaBuilder.createQuery(User.class);
             Root<User> root = query.from(User.class);
 
@@ -25,13 +24,11 @@ public class CustomHibernate extends GenericHibernate {
                     criteriaBuilder.equal(root.get("password"), password)
             ));
 
-            Query q = entityManager.createQuery(query);
+            Query q = getEntityManager().createQuery(query);
             user = (User) q.getSingleResult();
         } catch (Exception e) {
             e.printStackTrace();
         }
         return user;
     }
-
-
 }

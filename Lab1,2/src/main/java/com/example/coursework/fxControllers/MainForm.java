@@ -2,7 +2,9 @@ package com.example.coursework.fxControllers;
 
 import com.example.coursework.HelloApplication;
 import com.example.coursework.hibernateControllers.GenericHibernate;
-import com.example.coursework.jdbcFunctions.DatabaseUtils;
+import com.example.coursework.hibernateControllers.CustomHibernate;
+import com.example.coursework.utils.DatabaseUtils;
+import com.example.coursework.utils.FxUtils;
 import com.example.coursework.model.*;
 import com.example.coursework.model.enums.Demographic;
 import com.example.coursework.model.enums.Genre;
@@ -12,15 +14,19 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.value.ChangeListener;
 
 import java.io.IOException;
 import java.net.URL;
@@ -31,6 +37,12 @@ import java.util.stream.Collectors;
 public class MainForm implements Initializable {
     @FXML
     public ListView<Publication> myPublicationListField;
+    @FXML
+    public ListView<Publication> allPublicationsListView;
+    @FXML
+    public TextArea selectedPublicationDetails;
+    @FXML
+    public TreeView<String> commentsTreeView;
     @FXML
     public RadioButton myPublicationBookRadio;
     @FXML
@@ -55,7 +67,16 @@ public class MainForm implements Initializable {
     public TextField illustratorField;
     @FXML
     public TextField volumeField;
+    @FXML
     public CheckBox isMangaColoredField;
+    @FXML
+    public RadioButton filterBookRadio;
+    @FXML
+    public RadioButton filterMangaRadio;
+    @FXML
+    public VBox bookFiltersBox;
+    @FXML
+    public VBox mangaFiltersBox;
     @FXML
     public ChoiceBox<PublicationStatus> statusFilter;
     @FXML
@@ -75,125 +96,249 @@ public class MainForm implements Initializable {
     @FXML
     public Button markSoldButton;
     @FXML
-    public ListView<Publication> allPublicationsListView;
+    public Button editCommentButton;
     @FXML
-    public TextArea selectedPublicationDetails;
+    public Button deleteCommentButton;
     @FXML
-    public TreeView<String> commentsTreeView;
+    public TextArea editCommentText;
+
     @FXML
-    public RadioButton filterBookRadio;
+    private TableView<User> userTable;
     @FXML
-    public RadioButton filterMangaRadio;
+    private TableColumn<User, String> loginColumn;
     @FXML
-    public VBox bookFiltersBox;
+    private TableColumn<User, String> nameColumn;
     @FXML
-    public VBox mangaFiltersBox;
+    private TableColumn<User, String> surnameColumn;
+    @FXML
+    private TableColumn<User, String> emailColumn;
+    @FXML
+    private TableColumn<User, String> phoneColumn;
+    @FXML
+    private TableColumn<User, String> roleColumn;
+    
+    @FXML
+    private TextField loginField;
+    @FXML
+    private TextField nameField;
+    @FXML
+    private TextField surnameField;
+    @FXML
+    private TextField emailField;
+    @FXML
+    private TextField phoneField;
+    @FXML
+    private ComboBox<String> roleComboBox;
+    @FXML
+    private PasswordField passwordField;
+    @FXML
+    private Button newButton;
+    @FXML
+    private Button saveButton;
+    @FXML
+    private Button deleteButton;
 
     private EntityManagerFactory entityManagerFactory;
     private GenericHibernate genericHibernate;
+    private CustomHibernate customHibernate;
 
     private User loggedUser;
+    private boolean isAdmin;
+
+    private Comment selectedComment;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        disableFields();
+        initializeChoiceBoxes();
+        initializePublicationLists();
+        initializeRadioButtons();
+        initializeStatusButtons();
+        initializeUserManagement();
+        initializeCommentManagement();
+    }
+
+    private void initializeChoiceBoxes() {
         myPublicationLanguageField.getItems().addAll(Language.values());
         myPublicationGenreField.getItems().addAll(Genre.values());
         demographicField.getItems().addAll(Demographic.values());
-        statusFilter.getItems().addAll(PublicationStatus.values());
+        statusFilter.getItems().addAll(PublicationStatus.AVAILABLE, PublicationStatus.BORROWED);
         languageFilter.getItems().addAll(Language.values());
         genreFilter.getItems().addAll(Genre.values());
         demographicFilter.getItems().addAll(Demographic.values());
-        
-        // Initialize both publication lists
+    }
+
+    private void initializePublicationLists() {
         myPublicationListField.getItems().clear();
         if (allPublicationsListView != null) {
             allPublicationsListView.getItems().clear();
-            // Add selection listener for the main list view
             allPublicationsListView.getSelectionModel().selectedItemProperty().addListener(
-                (observable, oldValue, newValue) -> displayPublicationDetails(newValue)
+                (_, _, newValue) -> displayPublicationDetails(newValue)
             );
         }
+    }
 
-        // Set up publication type filter visibility
+    private void initializeRadioButtons() {
+        EventHandler<ActionEvent> disableHandler = e -> disableFields();
+        myPublicationBookRadio.setOnAction(disableHandler);
+        myPublicationMangaRadio.setOnAction(disableHandler);
+
         if (filterBookRadio != null && filterMangaRadio != null) {
             filterBookRadio.setSelected(true);
             updateFilterVisibility();
             filterBookRadio.setOnAction(e -> updateFilterVisibility());
             filterMangaRadio.setOnAction(e -> updateFilterVisibility());
         }
-
-        // Add status change button listeners
-        markAvailableButton.setOnAction(e -> changePublicationStatus(PublicationStatus.AVAILABLE));
-        markBorrowedButton.setOnAction(e -> changePublicationStatus(PublicationStatus.BORROWED));
-        markReservedButton.setOnAction(e -> changePublicationStatus(PublicationStatus.RESERVED));
-        markSoldButton.setOnAction(e -> changePublicationStatus(PublicationStatus.SOLD));
     }
 
-    public void setData(EntityManagerFactory entityManagerFactory, User user){
+    private void initializeStatusButtons() {
+        markAvailableButton.setOnAction(e -> changePublicationStatus(PublicationStatus.AVAILABLE));
+        markBorrowedButton.setOnAction(e -> changePublicationStatus(PublicationStatus.BORROWED));
+        markReservedButton.setVisible(false);
+        markSoldButton.setVisible(false);
+        disableFields();
+    }
+
+    private void initializeUserManagement() {
+        if (userTable != null) {
+            loginColumn.setCellValueFactory(new PropertyValueFactory<>("login"));
+            nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
+            surnameColumn.setCellValueFactory(new PropertyValueFactory<>("surname"));
+            emailColumn.setCellValueFactory(new PropertyValueFactory<>("email"));
+            phoneColumn.setCellValueFactory(data -> 
+                new SimpleStringProperty(data.getValue() instanceof Admin ? 
+                    ((Admin) data.getValue()).getPhoneNum() : ""));
+            roleColumn.setCellValueFactory(data -> 
+                new SimpleStringProperty(data.getValue() instanceof Admin ? "Admin" : "Client"));
+
+            roleComboBox.getItems().addAll("Client", "Admin");
+            roleComboBox.setValue("Client");
+
+            userTable.getSelectionModel().selectedItemProperty().addListener((_, _, user) -> {
+                if (user != null) displayUserDetails(user);
+            });
+        }
+    }
+
+    private void initializeCommentManagement() {
+        if (commentsTreeView != null) {
+            editCommentButton.setVisible(false);
+            deleteCommentButton.setVisible(false);
+            editCommentText.setVisible(false);
+            
+            commentsTreeView.getSelectionModel().selectedItemProperty().addListener((_, _, newValue) -> {
+                if (newValue != null) {
+                    selectedComment = findCommentByTreeItem(newValue);
+                    updateCommentButtons();
+                }
+            });
+        }
+    }
+
+    public void setData(EntityManagerFactory entityManagerFactory, User user) {
         this.entityManagerFactory = entityManagerFactory;
         this.genericHibernate = new GenericHibernate(entityManagerFactory);
+        this.customHibernate = new CustomHibernate(entityManagerFactory);
         this.loggedUser = user;
+        this.isAdmin = user instanceof Admin;
+        
+        setupUserAccess();
+        setupFilters();
+        refreshLists();
+    }
+
+    private void setupUserAccess() {
         setUserVisibility();
-        
-        // Add listeners for filters after genericHibernate is initialized
-        statusFilter.valueProperty().addListener((obs, oldVal, newVal) -> applyFilters());
-        languageFilter.valueProperty().addListener((obs, oldVal, newVal) -> applyFilters());
-        genreFilter.valueProperty().addListener((obs, oldVal, newVal) -> applyFilters());
-        demographicFilter.valueProperty().addListener((obs, oldVal, newVal) -> applyFilters());
-        searchField.textProperty().addListener((obs, oldVal, newVal) -> applyFilters());
-        
+    }
+
+    private void setupFilters() {
+        ChangeListener<Object> filterListener = (_, _, _) -> applyFilters();
+        statusFilter.valueProperty().addListener(filterListener);
+        languageFilter.valueProperty().addListener(filterListener);
+        genreFilter.valueProperty().addListener(filterListener);
+        demographicFilter.valueProperty().addListener(filterListener);
+        searchField.textProperty().addListener(filterListener);
+    }
+
+    private void refreshLists() {
         refreshPublicationList();
+        refreshUserList();
     }
 
     private void setUserVisibility() {
-        if(loggedUser instanceof Client){
-            // Clients can add publications but cannot delete them
-            myPublicationBookRadio.setDisable(false);
-            myPublicationMangaRadio.setDisable(false);
-            myPublicationTitleField.setDisable(false);
-            myPublicationDescriptionField.setDisable(false);
-            myPublicationAuthorField.setDisable(false);
-            myPublicationIsbnField.setDisable(false);
-            mysPublicationYearField.setDisable(false);
-            myPublicationLanguageField.setDisable(false);
-            myPublicationGenreField.setDisable(false);
-            demographicField.setDisable(false);
-            illustratorField.setDisable(false);
-            volumeField.setDisable(false);
-            isMangaColoredField.setDisable(false);
-        } else {
-            // Admin has full access to all fields
-            myPublicationBookRadio.setDisable(false);
-            myPublicationMangaRadio.setDisable(false);
-            myPublicationTitleField.setDisable(false);
-            myPublicationDescriptionField.setDisable(false);
-            myPublicationAuthorField.setDisable(false);
-            myPublicationIsbnField.setDisable(false);
-            mysPublicationYearField.setDisable(false);
-            myPublicationLanguageField.setDisable(false);
-            myPublicationGenreField.setDisable(false);
-            demographicField.setDisable(false);
-            illustratorField.setDisable(false);
-            volumeField.setDisable(false);
-            isMangaColoredField.setDisable(false);
+        boolean isClient = loggedUser instanceof Client;
+        
+        // Hide user management controls for non-admin users
+        if (userTable != null) {
+            // For admin: show all users and add button
+            // For regular users: show only themselves
+            userTable.setVisible(true);
+            userTable.setManaged(true);
+            
+            if (isAdmin) {
+                // Admin sees all controls and all users
+                saveButton.setVisible(true);
+                deleteButton.setVisible(true);
+                newButton.setText("Add User");
+                newButton.setVisible(true);
+                refreshUserList();
+            } else {
+                // Regular users only see their own info and can edit it
+                saveButton.setVisible(true);
+                deleteButton.setVisible(false);
+                newButton.setVisible(false);
+                
+                // Show only the logged-in user
+                userTable.getItems().clear();
+                userTable.getItems().add(loggedUser);
+                
+                // Select the user's row
+                userTable.getSelectionModel().select(loggedUser);
+                displayUserDetails(loggedUser);
+            }
+            
+            // Set field editability
+            boolean canEdit = isAdmin || !loginField.getText().isEmpty();
+            loginField.setDisable(true); // Login should never be editable
+            nameField.setDisable(!canEdit);
+            surnameField.setDisable(!canEdit);
+            emailField.setDisable(!canEdit);
+            phoneField.setDisable(!canEdit);
+            roleComboBox.setDisable(!isAdmin); // Only admins can change roles
+            passwordField.setDisable(!canEdit);
         }
+    }
+
+    private void setFieldsDisabled(boolean disabled) {
+        myPublicationBookRadio.setDisable(disabled);
+        myPublicationMangaRadio.setDisable(disabled);
+        myPublicationTitleField.setDisable(disabled);
+        myPublicationDescriptionField.setDisable(disabled);
+        myPublicationAuthorField.setDisable(disabled);
+        myPublicationIsbnField.setDisable(disabled);
+        mysPublicationYearField.setDisable(disabled);
+        myPublicationLanguageField.setDisable(disabled);
+        myPublicationGenreField.setDisable(disabled);
+        demographicField.setDisable(disabled);
+        illustratorField.setDisable(disabled);
+        volumeField.setDisable(disabled);
+        isMangaColoredField.setDisable(disabled);
     }
 
     public void createNewPublication() {
         if (myPublicationBookRadio.isSelected()) {
             if (validateBookFields()) {
                 try {
-                    Book book = new Book(myPublicationTitleField.getText(),
-                            myPublicationDescriptionField.getText(),
-                            myPublicationLanguageField.getValue(),
-                            myPublicationIsbnField.getText(),
-                            mysPublicationYearField.getValue().getYear(),
-                            myPublicationAuthorField.getText(),
-                            myPublicationGenreField.getValue());
+                Book book = new Book(myPublicationTitleField.getText(),
+                        myPublicationDescriptionField.getText(),
+                        myPublicationLanguageField.getValue(),
+                        myPublicationIsbnField.getText(),
+                        mysPublicationYearField.getValue().getYear(),
+                        myPublicationAuthorField.getText(),
+                        myPublicationGenreField.getValue());
                     book.setOwner(loggedUser);
+                    book.setDateCreated(java.time.LocalDate.now());
 
-                    genericHibernate.create(book);
+                genericHibernate.create(book);
                     refreshPublicationList();
                     FxUtils.generateAlert(Alert.AlertType.INFORMATION, "Success", "Book created successfully!");
                     clearAllFields();
@@ -201,7 +346,7 @@ public class MainForm implements Initializable {
                     FxUtils.generateAlert(Alert.AlertType.ERROR, "Error", "Failed to create book: " + e.getMessage());
                 }
             }
-        } else {
+        } else if (myPublicationMangaRadio.isSelected()) {
             if (validateMangaFields()) {
                 try {
                     Manga manga = new Manga(
@@ -214,6 +359,7 @@ public class MainForm implements Initializable {
                         isMangaColoredField.isSelected()
                     );
                     manga.setOwner(loggedUser);
+                    manga.setDateCreated(java.time.LocalDate.now());
 
                     genericHibernate.create(manga);
                     refreshPublicationList();
@@ -260,97 +406,99 @@ public class MainForm implements Initializable {
     }
 
     private void refreshPublicationList() {
-        myPublicationListField.getItems().clear();
-        List<Publication> allPublications = genericHibernate.getAllRecords(Publication.class);
-        // Filter publications to show only those belonging to the logged-in user
-        List<Publication> userPublications = allPublications.stream()
-                .filter(pub -> pub.getOwner() != null && pub.getOwner().getId() == loggedUser.getId())
-                .collect(Collectors.toList());
-        myPublicationListField.getItems().addAll(userPublications);
-        
-        // Also refresh the main page publications list
-        refreshAllPublicationsList();
+        if (myPublicationListField != null && genericHibernate != null) {
+            List<Publication> allPublications = genericHibernate.getAllRecords(Publication.class);
+
+            myPublicationListField.getItems().clear();
+            myPublicationListField.getItems().addAll(
+                allPublications.stream()
+                    .filter(pub -> pub.getOwner() != null && pub.getOwner().getId() == loggedUser.getId())
+                    .collect(Collectors.toList())
+            );
+            
+            refreshAllPublicationsList();
+        }
     }
 
     private void refreshAllPublicationsList() {
-        if (allPublicationsListView != null) {
+        if (allPublicationsListView != null && genericHibernate != null) {
             allPublicationsListView.getItems().clear();
             allPublicationsListView.getItems().addAll(genericHibernate.getAllRecords(Publication.class));
+            applyFilters();
         }
     }
 
     private void updateFilterVisibility() {
         if (bookFiltersBox != null && mangaFiltersBox != null) {
-            bookFiltersBox.setVisible(filterBookRadio.isSelected());
-            bookFiltersBox.setManaged(filterBookRadio.isSelected());
-            mangaFiltersBox.setVisible(filterMangaRadio.isSelected());
-            mangaFiltersBox.setManaged(filterMangaRadio.isSelected());
-            if (genericHibernate != null) {
-                applyFilters();
-            }
+            boolean isBookSelected = filterBookRadio.isSelected();
+            bookFiltersBox.setVisible(isBookSelected);
+            bookFiltersBox.setManaged(isBookSelected);
+            mangaFiltersBox.setVisible(!isBookSelected);
+            mangaFiltersBox.setManaged(!isBookSelected);
+            applyFilters();
         }
     }
 
     private void applyFilters() {
-        List<Publication> allPublications = genericHibernate.getAllRecords(Publication.class);
-        List<Publication> filteredPublications = allPublications.stream()
-                .filter(pub -> {
-                    if (filterBookRadio.isSelected()) {
-                        return pub instanceof Book;
-                    } else {
-                        return pub instanceof Manga;
-                    }
-                })
-                .filter(pub -> statusFilter.getValue() == null || pub.getStatus() == statusFilter.getValue())
-                .filter(pub -> languageFilter.getValue() == null || pub.getLanguage() == languageFilter.getValue())
-                .filter(pub -> {
-                    if (filterBookRadio.isSelected() && genreFilter.getValue() != null) {
-                        return pub instanceof Book && ((Book) pub).getGenre() == genreFilter.getValue();
-                    }
-                    return true;
-                })
-                .filter(pub -> {
-                    if (filterMangaRadio.isSelected() && demographicFilter.getValue() != null) {
-                        return pub instanceof Manga && ((Manga) pub).getDemographic() == demographicFilter.getValue();
-                    }
-                    return true;
-                })
-                .filter(pub -> {
-                    if (searchField.getText().isEmpty()) return true;
-                    String searchLower = searchField.getText().toLowerCase();
-                    return pub.getTitle().toLowerCase().contains(searchLower) ||
-                           pub.getDescription().toLowerCase().contains(searchLower);
-                })
-                .collect(Collectors.toList());
+        if (allPublicationsListView == null || genericHibernate == null) return;
 
-        // Update both lists
-        if (allPublicationsListView != null) {
-            allPublicationsListView.getItems().clear();
-            allPublicationsListView.getItems().addAll(filteredPublications);
-        }
+        List<Publication> filteredPublications = genericHibernate.getAllRecords(Publication.class).stream()
+            .filter(pub -> {
+                if (filterBookRadio != null && filterMangaRadio != null) {
+                    return filterBookRadio.isSelected() ? pub instanceof Book : pub instanceof Manga;
+                }
+                return true;
+            })
+            .filter(pub -> statusFilter.getValue() == null || pub.getStatus() == statusFilter.getValue())
+            .filter(pub -> languageFilter.getValue() == null || pub.getLanguage() == languageFilter.getValue())
+            .filter(pub -> {
+                if (filterBookRadio != null && filterBookRadio.isSelected() && genreFilter.getValue() != null) {
+                    return pub instanceof Book && ((Book) pub).getGenre() == genreFilter.getValue();
+                }
+                return true;
+            })
+            .filter(pub -> {
+                if (filterMangaRadio != null && filterMangaRadio.isSelected() && demographicFilter.getValue() != null) {
+                    return pub instanceof Manga && ((Manga) pub).getDemographic() == demographicFilter.getValue();
+                }
+                return true;
+            })
+            .filter(pub -> {
+                String search = searchField.getText();
+                return search == null || search.isEmpty() || 
+                       pub.getTitle().toLowerCase().contains(search.toLowerCase()) ||
+                       (pub.getDescription() != null && pub.getDescription().toLowerCase().contains(search.toLowerCase()));
+            })
+            .collect(Collectors.toList());
+
+        allPublicationsListView.getItems().clear();
+        allPublicationsListView.getItems().addAll(filteredPublications);
     }
 
     public void disableFields() {
-        if (loggedUser instanceof Client) {
-            return; // Don't modify fields for clients as they're already disabled in setUserVisibility
-        }
+        // Disable/enable Book-specific fields
+        myPublicationIsbnField.setDisable(!myPublicationBookRadio.isSelected());
+        myPublicationAuthorField.setDisable(!myPublicationBookRadio.isSelected());
+        myPublicationGenreField.setDisable(!myPublicationBookRadio.isSelected());
+        mysPublicationYearField.setDisable(!myPublicationBookRadio.isSelected());
 
-        if (myPublicationMangaRadio.isSelected()) {
-            myPublicationIsbnField.setDisable(true);
-            myPublicationAuthorField.setDisable(true);
-            myPublicationGenreField.setDisable(true);
-            mysPublicationYearField.setDisable(true);
-            illustratorField.setDisable(false);
-            demographicField.setDisable(false);
-            volumeField.setDisable(false);
+        // Disable/enable Manga-specific fields
+        illustratorField.setDisable(!myPublicationMangaRadio.isSelected());
+        demographicField.setDisable(!myPublicationMangaRadio.isSelected());
+        volumeField.setDisable(!myPublicationMangaRadio.isSelected());
+        isMangaColoredField.setDisable(!myPublicationMangaRadio.isSelected());
+
+        // Clear fields when switching types
+        if (myPublicationBookRadio.isSelected()) {
+            illustratorField.clear();
+            volumeField.clear();
+            demographicField.setValue(null);
+            isMangaColoredField.setSelected(false);
         } else {
-            myPublicationIsbnField.setDisable(false);
-            myPublicationAuthorField.setDisable(false);
-            myPublicationGenreField.setDisable(false);
-            mysPublicationYearField.setDisable(false);
-            illustratorField.setDisable(true);
-            demographicField.setDisable(true);
-            volumeField.setDisable(true);
+            myPublicationIsbnField.clear();
+            myPublicationAuthorField.clear();
+            myPublicationGenreField.setValue(null);
+            mysPublicationYearField.setValue(null);
         }
     }
 
@@ -447,28 +595,25 @@ public class MainForm implements Initializable {
 
     public void deletePublication() {
         Publication publication = myPublicationListField.getSelectionModel().getSelectedItem();
-        Publication publication1 = genericHibernate.getEntityById(Publication.class, publication.getId());
-        //genericHibernate.delete(publication1); Why detached sioje vietoje
         genericHibernate.delete(Publication.class, publication.getId());
-        myPublicationListField.getItems().clear();
-        myPublicationListField.getItems().addAll(genericHibernate.getAllRecords(Publication.class));
+        refreshPublicationList();
     }
 
     public void loadRegForm(ActionEvent actionEvent) {
         try {
-            FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("registration-form.fxml"));
+        FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("registration-form.fxml"));
             if (fxmlLoader.getLocation() == null) {
                 throw new IOException("Registration form FXML not found");
             }
 
-            Stage stage = new Stage();
-            Parent parent = fxmlLoader.load();
-            RegistrationForm registrationForm = fxmlLoader.getController();
-            registrationForm.setData(entityManagerFactory);
+        Stage stage = new Stage();
+        Parent parent = fxmlLoader.load();
+        RegistrationForm registrationForm = fxmlLoader.getController();
+        registrationForm.setData(entityManagerFactory);
             
-            Scene scene = new Scene(parent);
-            stage.setTitle("Book Exchange Platform!");
-            stage.setScene(scene);
+        Scene scene = new Scene(parent);
+        stage.setTitle("Book Exchange Platform!");
+        stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.showAndWait();
         } catch (IOException e) {
@@ -487,6 +632,18 @@ public class MainForm implements Initializable {
             return;
         }
 
+        // Only allow changing to AVAILABLE if currently BORROWED
+        if (newStatus == PublicationStatus.AVAILABLE && publication.getStatus() != PublicationStatus.BORROWED) {
+            FxUtils.generateAlert(Alert.AlertType.WARNING, "Warning", "Can only mark as available if currently borrowed");
+            return;
+        }
+
+        // Only allow changing to BORROWED if currently AVAILABLE
+        if (newStatus == PublicationStatus.BORROWED && publication.getStatus() != PublicationStatus.AVAILABLE) {
+            FxUtils.generateAlert(Alert.AlertType.WARNING, "Warning", "Can only mark as borrowed if currently available");
+            return;
+        }
+
         try {
             publication.setStatus(newStatus);
             genericHibernate.update(publication);
@@ -499,14 +656,119 @@ public class MainForm implements Initializable {
 
     @FXML
     public void leaveReview() {
-        // TODO: Implement review functionality
-        FxUtils.generateAlert(Alert.AlertType.INFORMATION, "Info", "Review functionality coming soon!");
+        Publication selectedPublication = allPublicationsListView.getSelectionModel().getSelectedItem();
+        if (selectedPublication == null) {
+            FxUtils.generateAlert(Alert.AlertType.WARNING, "Warning", "Please select a publication first");
+            return;
+        }
+
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("review-dialog.fxml"));
+            Stage stage = new Stage();
+            Parent parent = fxmlLoader.load();
+            
+            ReviewDialog reviewDialog = fxmlLoader.getController();
+            reviewDialog.setData(selectedPublication, loggedUser, genericHibernate, 
+                () -> displayPublicationDetails(selectedPublication));
+            
+            Scene scene = new Scene(parent);
+            stage.setTitle("Write a Review");
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.showAndWait();
+        } catch (IOException e) {
+            FxUtils.generateAlert(Alert.AlertType.ERROR, "Error", 
+                "Failed to open review dialog: " + e.getMessage());
+        }
     }
 
     @FXML
     public void requestPublication() {
-        // TODO: Implement request functionality
-        FxUtils.generateAlert(Alert.AlertType.INFORMATION, "Info", "Request functionality coming soon!");
+        Publication selectedPublication = allPublicationsListView.getSelectionModel().getSelectedItem();
+        if (selectedPublication == null) {
+            FxUtils.generateAlert(Alert.AlertType.WARNING, "Warning", "Please select a publication first");
+            return;
+        }
+
+        if (selectedPublication.getStatus() != PublicationStatus.AVAILABLE) {
+            FxUtils.generateAlert(Alert.AlertType.WARNING, "Warning", "This publication is not available for borrowing");
+            return;
+        }
+
+        if (selectedPublication.getOwner() == null) {
+            FxUtils.generateAlert(Alert.AlertType.WARNING, "Warning", "This publication has no owner assigned");
+            return;
+        }
+
+        if (selectedPublication.getOwner().getId() == loggedUser.getId()) {
+            FxUtils.generateAlert(Alert.AlertType.WARNING, "Warning", "This is your publication - you cannot borrow it");
+            return;
+        }
+
+        // Check if there's already a pending request
+        EntityManager em = genericHibernate.getEntityManager();
+        List<PublicationRequest> existingRequests = em.createQuery(
+            "SELECT r FROM PublicationRequest r WHERE r.publication = :pub AND r.requester = :user AND r.status = :status",
+            PublicationRequest.class)
+            .setParameter("pub", selectedPublication)
+            .setParameter("user", loggedUser)
+            .setParameter("status", PublicationRequest.RequestStatus.PENDING)
+            .getResultList();
+
+        if (!existingRequests.isEmpty()) {
+            FxUtils.generateAlert(Alert.AlertType.WARNING, "Warning", "You already have a pending request for this publication");
+            return;
+        }
+
+        try {
+            PublicationRequest request = new PublicationRequest(loggedUser, selectedPublication);
+            genericHibernate.create(request);
+            FxUtils.generateAlert(Alert.AlertType.INFORMATION, "Success", "Request submitted successfully! Waiting for owner's approval.");
+        } catch (Exception e) {
+            FxUtils.generateAlert(Alert.AlertType.ERROR, "Error", "Failed to submit request: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    public void viewRequests() {
+        Publication selectedPublication = myPublicationListField.getSelectionModel().getSelectedItem();
+        if (selectedPublication == null) {
+            FxUtils.generateAlert(Alert.AlertType.WARNING, "Warning", "Please select a publication first");
+            return;
+        }
+
+        EntityManager em = genericHibernate.getEntityManager();
+        List<PublicationRequest> requests = em.createQuery(
+            "SELECT r FROM PublicationRequest r WHERE r.publication = :pub AND r.status = :status",
+            PublicationRequest.class)
+            .setParameter("pub", selectedPublication)
+            .setParameter("status", PublicationRequest.RequestStatus.PENDING)
+            .getResultList();
+
+        if (requests.isEmpty()) {
+            FxUtils.generateAlert(Alert.AlertType.INFORMATION, "Info", "No pending requests for this publication");
+            return;
+        }
+
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("request-list-dialog.fxml"));
+            Stage stage = new Stage();
+            Parent parent = fxmlLoader.load();
+            
+            RequestListDialog dialog = fxmlLoader.getController();
+            dialog.setData(requests, genericHibernate, () -> {
+                refreshPublicationList();
+                FxUtils.generateAlert(Alert.AlertType.INFORMATION, "Success", "Requests processed successfully!");
+            });
+            
+            Scene scene = new Scene(parent);
+            stage.setTitle("Publication Requests");
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.showAndWait();
+        } catch (IOException e) {
+            FxUtils.generateAlert(Alert.AlertType.ERROR, "Error", "Failed to open requests dialog: " + e.getMessage());
+        }
     }
 
     private void displayPublicationDetails(Publication publication) {
@@ -519,27 +781,439 @@ public class MainForm implements Initializable {
         details.append("Description: ").append(publication.getDescription()).append("\n\n");
         details.append("Language: ").append(publication.getLanguage()).append("\n");
         details.append("Status: ").append(publication.getStatus()).append("\n");
-        details.append("Date Created: ").append(publication.getDateCreated()).append("\n\n");
+        details.append("Owner: ").append(publication.getOwner() != null ? publication.getOwner().getLogin() : "No owner").append("\n");
+        details.append("Date Created: ").append(publication.getDateCreated().toString()).append("\n\n");
 
-        if (publication instanceof Book book) {
-            details.append("Type: Book\n");
-            details.append("ISBN: ").append(book.getIsbn()).append("\n");
-            details.append("Authors: ").append(book.getAuthors()).append("\n");
-            details.append("Year: ").append(book.getYear()).append("\n");
-            details.append("Genre: ").append(book.getGenre());
-        } else if (publication instanceof Manga manga) {
-            details.append("Type: Manga\n");
-            details.append("Illustrator: ").append(manga.getIllustrator()).append("\n");
-            details.append("Volume: ").append(manga.getVolume()).append("\n");
-            details.append("Demographic: ").append(manga.getDemographic()).append("\n");
-            details.append("Colored: ").append(manga.isColored() ? "Yes" : "No");
+        // Show pending request status if user has requested this publication and it has an owner
+        if (publication.getOwner() != null && loggedUser.getId() != publication.getOwner().getId()) {
+            EntityManager em = genericHibernate.getEntityManager();
+            List<PublicationRequest> userRequests = em.createQuery(
+                "SELECT r FROM PublicationRequest r WHERE r.publication = :pub AND r.requester = :user AND r.status = :status",
+                PublicationRequest.class)
+                .setParameter("pub", publication)
+                .setParameter("user", loggedUser)
+                .setParameter("status", PublicationRequest.RequestStatus.PENDING)
+                .getResultList();
+
+            if (!userRequests.isEmpty()) {
+                details.append("Your request status: PENDING\n\n");
+            }
         }
 
         selectedPublicationDetails.setText(details.toString());
         
-        // TODO: Update comments tree view
+        // Refresh comments
         if (commentsTreeView != null) {
-            commentsTreeView.setRoot(null); // Clear comments for now
+            commentsTreeView.setRoot(null);
+            if (publication.getCommentList() != null && !publication.getCommentList().isEmpty()) {
+                TreeItem<String> root = new TreeItem<>("Comments");
+                for (Comment comment : publication.getCommentList()) {
+                    if (comment.getParentComment() == null) {
+                        root.getChildren().add(createCommentNode(comment));
+                    }
+                }
+                commentsTreeView.setRoot(root);
+                commentsTreeView.setShowRoot(false);
+            }
+        }
+    }
+
+    private TreeItem<String> createCommentNode(Comment comment) {
+        String commentText;
+        String userLogin = comment.getUser() != null ? comment.getUser().getLogin() : "Unknown User";
+        String dateStr = comment.getCreatedAt() != null ? comment.getCreatedAt().toLocalDate().toString() : "No date";
+        
+        if (comment instanceof Rating rating) {
+            commentText = String.format("%s - %s (%d★)\n%s", 
+                userLogin,
+                dateStr,
+                rating.getStars(),
+                comment.getText()
+            );
+        } else {
+            commentText = String.format("%s - %s\n%s", 
+                userLogin,
+                dateStr,
+                comment.getText()
+            );
+        }
+        TreeItem<String> node = new TreeItem<>(commentText);
+        
+        if (comment.getReplies() != null) {
+            for (Comment reply : comment.getReplies()) {
+                node.getChildren().add(createCommentNode(reply));
+            }
+        }
+        
+        return node;
+    }
+
+    @FXML
+    public void openUserManagement() {
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("user-management.fxml"));
+            Stage stage = new Stage();
+            Parent parent = fxmlLoader.load();
+            
+            UserManagementForm userManagementForm = fxmlLoader.getController();
+            userManagementForm.setData(entityManagerFactory, loggedUser);
+            
+            Scene scene = new Scene(parent);
+            stage.setTitle("User Management");
+            stage.setScene(scene);
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.showAndWait();
+        } catch (IOException e) {
+            FxUtils.generateAlert(Alert.AlertType.ERROR, "Error", 
+                "Failed to open user management: " + e.getMessage());
+        }
+    }
+
+    private void refreshUserList() {
+        if (userTable != null) {
+            userTable.getItems().clear();
+            if (isAdmin) {
+                // Admin sees all users
+                List<User> users = genericHibernate.getAllRecords(User.class);
+                userTable.getItems().addAll(users);
+            } else {
+                // Regular users only see themselves
+                userTable.getItems().add(loggedUser);
+            }
+            userTable.refresh();
+        }
+    }
+
+    private void displayUserDetails(User user) {
+        if (loginField == null) return;
+        
+        loginField.setText(user.getLogin());
+        nameField.setText(user.getName());
+        surnameField.setText(user.getSurname());
+        emailField.setText(user.getEmail());
+        phoneField.setText(user instanceof Admin ? ((Admin) user).getPhoneNum() : "");
+        roleComboBox.setValue(user instanceof Admin ? "Admin" : "Client");
+        passwordField.clear();
+    }
+
+    private void updateUserDetails(User user) {
+        user.setLogin(loginField.getText());
+        user.setName(nameField.getText());
+        user.setSurname(surnameField.getText());
+        user.setEmail(emailField.getText());
+
+        if (!passwordField.getText().isEmpty()) {
+            user.setPassword(DatabaseUtils.hashPassword(passwordField.getText()));
+        }
+
+        if (user instanceof Admin) {
+            ((Admin) user).setPhoneNum(phoneField.getText());
+        }
+
+        genericHibernate.update(user);
+    }
+
+    private void clearUserFields() {
+        if (loginField == null) return;
+        
+        loginField.clear();
+        nameField.clear();
+        surnameField.clear();
+        emailField.clear();
+        phoneField.clear();
+        passwordField.clear();
+        roleComboBox.setValue("Client");
+    }
+
+    private Comment findCommentByTreeItem(TreeItem<String> item) {
+        Publication publication = allPublicationsListView.getSelectionModel().getSelectedItem();
+        if (publication == null || item == null) return null;
+
+        String commentText = item.getValue();
+        return findCommentInPublication(publication, commentText);
+    }
+
+    private Comment findCommentInPublication(Publication publication, String commentText) {
+        if (publication.getCommentList() == null) return null;
+        
+        for (Comment comment : publication.getCommentList()) {
+            if (formatCommentText(comment).equals(commentText)) return comment;
+            Comment found = findInReplies(comment, commentText);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private Comment findInReplies(Comment parent, String commentText) {
+        if (parent.getReplies() == null) return null;
+        
+        for (Comment reply : parent.getReplies()) {
+            if (formatCommentText(reply).equals(commentText)) return reply;
+            Comment found = findInReplies(reply, commentText);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private String formatCommentText(Comment comment) {
+        String userLogin = comment.getUser() != null ? comment.getUser().getLogin() : "Unknown User";
+        String dateStr = comment.getCreatedAt() != null ? comment.getCreatedAt().toLocalDate().toString() : "No date";
+        
+        return comment instanceof Rating rating ?
+            String.format("%s - %s (%d★)\n%s", userLogin, dateStr, rating.getStars(), comment.getText()) :
+            String.format("%s - %s\n%s", userLogin, dateStr, comment.getText());
+    }
+
+    private void updateCommentButtons() {
+        boolean hasSelectedComment = selectedComment != null;
+        boolean isOwner = hasSelectedComment && selectedComment.getUser().getId() == loggedUser.getId();
+        
+        editCommentButton.setVisible(hasSelectedComment && isOwner);
+        deleteCommentButton.setVisible(hasSelectedComment && (isOwner || isAdmin));
+        editCommentText.setVisible(false);
+    }
+
+    @FXML
+    public void handleEditComment() {
+        if (selectedComment == null) return;
+        
+        editCommentText.setVisible(true);
+        editCommentText.setText(selectedComment.getText());
+    }
+
+    @FXML
+    public void handleSaveEdit() {
+        if (selectedComment == null || editCommentText.getText().trim().isEmpty()) return;
+        
+        try {
+            selectedComment.edit(editCommentText.getText().trim());
+            genericHibernate.update(selectedComment);
+            refreshCommentView();
+            FxUtils.generateAlert(Alert.AlertType.INFORMATION, "Success", "Comment updated successfully!");
+        } catch (Exception e) {
+            FxUtils.generateAlert(Alert.AlertType.ERROR, "Error", "Failed to update comment: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleDeleteComment() {
+        if (selectedComment == null) return;
+        
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, 
+            "Are you sure you want to delete this comment?\nThis action cannot be undone.", 
+            ButtonType.YES, ButtonType.NO);
+            
+        if (alert.showAndWait().get() == ButtonType.YES) {
+            try {
+                selectedComment.delete();
+                genericHibernate.update(selectedComment);
+                refreshCommentView();
+                FxUtils.generateAlert(Alert.AlertType.INFORMATION, "Success", "Comment deleted successfully!");
+            } catch (Exception e) {
+                FxUtils.generateAlert(Alert.AlertType.ERROR, "Error", "Failed to delete comment: " + e.getMessage());
+            }
+        }
+    }
+
+    private void refreshCommentView() {
+        editCommentText.setVisible(false);
+        Publication currentPublication = allPublicationsListView.getSelectionModel().getSelectedItem();
+        if (currentPublication != null) {
+            // Refresh the publication from database to get updated comments
+            EntityManager em = genericHibernate.getEntityManager();
+            em.refresh(currentPublication);
+            
+            // Update the publication in the list view
+            int index = allPublicationsListView.getItems().indexOf(currentPublication);
+            if (index >= 0) {
+                allPublicationsListView.getItems().set(index, currentPublication);
+            }
+            
+            // Display updated details
+            displayPublicationDetails(currentPublication);
+        }
+    }
+
+    @FXML
+    public void handleNew() {
+        clearUserFields();
+        loginField.setDisable(false);
+    }
+
+    @FXML
+    public void handleSave() {
+        if (nameField.getText().isEmpty() || 
+            surnameField.getText().isEmpty() || 
+            emailField.getText().isEmpty()) {
+            FxUtils.generateAlert(Alert.AlertType.WARNING, "Warning", "Please fill in all required fields");
+            return;
+        }
+
+        try {
+            User selectedUser = userTable.getSelectionModel().getSelectedItem();
+            if (selectedUser == null) {
+                FxUtils.generateAlert(Alert.AlertType.WARNING, "Warning", "Please select a user to update");
+                return;
+            }
+
+            // Only admins can change roles
+            if (isAdmin) {
+                if (roleComboBox.getValue().equals("Admin") && !(selectedUser instanceof Admin)) {
+                    Admin admin = new Admin();
+                    admin.setId(selectedUser.getId());
+                    admin.setDateCreated(selectedUser.getDateCreated());
+                    selectedUser = admin;
+                } else if (roleComboBox.getValue().equals("Client") && !(selectedUser instanceof Client)) {
+                    Client client = new Client();
+                    client.setId(selectedUser.getId());
+                    client.setDateCreated(selectedUser.getDateCreated());
+                    selectedUser = client;
+                }
+            }
+
+            // Set common fields
+            selectedUser.setName(nameField.getText());
+            selectedUser.setSurname(surnameField.getText());
+            selectedUser.setEmail(emailField.getText());
+
+            if (!passwordField.getText().isEmpty()) {
+                selectedUser.setPassword(DatabaseUtils.hashPassword(passwordField.getText()));
+            }
+
+            // Handle admin-specific fields
+            if (selectedUser instanceof Admin) {
+                ((Admin) selectedUser).setPhoneNum(phoneField.getText());
+            }
+
+            genericHibernate.update(selectedUser);
+            
+            // If the logged-in user was updated, refresh their info
+            if (selectedUser.getId() == loggedUser.getId()) {
+                loggedUser = selectedUser;
+            }
+            
+            refreshUserList();
+            FxUtils.generateAlert(Alert.AlertType.INFORMATION, "Success", "User updated successfully!");
+        } catch (Exception e) {
+            FxUtils.generateAlert(Alert.AlertType.ERROR, "Error", "Failed to update user: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleDelete() {
+        User selectedUser = userTable.getSelectionModel().getSelectedItem();
+        if (selectedUser == null) {
+            FxUtils.generateAlert(Alert.AlertType.WARNING, "Warning", "Please select a user to delete");
+            return;
+        }
+
+        if (selectedUser.getId() == loggedUser.getId()) {
+            FxUtils.generateAlert(Alert.AlertType.WARNING, "Warning", "You cannot delete your own account");
+            return;
+        }
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION,
+            "Are you sure you want to delete this user?\nThis action cannot be undone.",
+            ButtonType.YES, ButtonType.NO);
+
+        if (alert.showAndWait().get() == ButtonType.YES) {
+            try {
+                // Get all publications owned by the user
+                List<Publication> publications = genericHibernate.getEntityManager()
+                    .createQuery("SELECT p FROM Publication p WHERE p.owner.id = :userId", Publication.class)
+                    .setParameter("userId", selectedUser.getId())
+                    .getResultList();
+
+                // For each publication
+                for (Publication pub : publications) {
+                    // Delete all comments on this publication
+                    List<Comment> comments = genericHibernate.getEntityManager()
+                        .createQuery("SELECT c FROM Comment c WHERE c.publication.id = :pubId", Comment.class)
+                        .setParameter("pubId", pub.getId())
+                        .getResultList();
+                    
+                    for (Comment comment : comments) {
+                        genericHibernate.delete(Comment.class, comment.getId());
+                    }
+
+                    // Delete all requests for this publication
+                    List<PublicationRequest> requests = genericHibernate.getEntityManager()
+                        .createQuery("SELECT r FROM PublicationRequest r WHERE r.publication.id = :pubId", PublicationRequest.class)
+                        .setParameter("pubId", pub.getId())
+                        .getResultList();
+                    
+                    for (PublicationRequest request : requests) {
+                        genericHibernate.delete(PublicationRequest.class, request.getId());
+                    }
+
+                    // Delete the publication
+                    genericHibernate.delete(Publication.class, pub.getId());
+                }
+
+                // Delete all comments made by the user
+                List<Comment> userComments = genericHibernate.getEntityManager()
+                    .createQuery("SELECT c FROM Comment c WHERE c.user.id = :userId", Comment.class)
+                    .setParameter("userId", selectedUser.getId())
+                    .getResultList();
+                
+                for (Comment comment : userComments) {
+                    genericHibernate.delete(Comment.class, comment.getId());
+                }
+
+                // Delete all publication requests made by the user
+                List<PublicationRequest> userRequests = genericHibernate.getEntityManager()
+                    .createQuery("SELECT r FROM PublicationRequest r WHERE r.requester.id = :userId", PublicationRequest.class)
+                    .setParameter("userId", selectedUser.getId())
+                    .getResultList();
+                
+                for (PublicationRequest request : userRequests) {
+                    genericHibernate.delete(PublicationRequest.class, request.getId());
+                }
+
+                // Finally delete the user
+                genericHibernate.delete(User.class, selectedUser.getId());
+
+                // Update UI
+                userTable.getItems().remove(selectedUser);
+                clearUserFields();
+                refreshUserList();
+
+                FxUtils.generateAlert(Alert.AlertType.INFORMATION, "Success", "User and all associated data deleted successfully!");
+            } catch (Exception e) {
+                FxUtils.generateAlert(Alert.AlertType.ERROR, "Error", "Failed to delete user: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @FXML
+    public void createNewUser() {
+        if (!isAdmin) {
+            FxUtils.generateAlert(Alert.AlertType.WARNING, "Warning", "Only administrators can create new users");
+            return;
+        }
+        
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("registration-form.fxml"));
+            Stage stage = new Stage();
+            Parent parent = fxmlLoader.load();
+            
+            RegistrationForm registrationForm = fxmlLoader.getController();
+            registrationForm.setData(entityManagerFactory);
+            registrationForm.setData(entityManagerFactory);
+            registrationForm.setAdminMode(true);
+            
+            Scene scene = new Scene(parent);
+            stage.setTitle("Create New User");
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.showAndWait();
+            
+            // Refresh the user list after creation
+            refreshUserList();
+        } catch (IOException e) {
+            FxUtils.generateAlert(Alert.AlertType.ERROR, "Error", 
+                "Failed to open user creation form: " + e.getMessage());
         }
     }
 }

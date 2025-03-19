@@ -249,7 +249,7 @@ public class Utils {
 
     public static List<User> getUsersFromFile() {
         List<User> users = new ArrayList<>();
-        
+
         try (BufferedReader reader = new BufferedReader(new FileReader("users.txt"))) {
             String line;
             while ((line = reader.readLine()) != null) {

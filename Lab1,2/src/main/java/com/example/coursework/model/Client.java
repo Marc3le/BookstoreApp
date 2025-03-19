@@ -21,7 +21,7 @@ import java.util.List;
 public final class Client extends User {
     private String address;
     private LocalDate birthDate;
-    @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<Comment> myComments;
 
     public Client(String login, String password, String name, String surname, String email, String address, LocalDate birthDate) {

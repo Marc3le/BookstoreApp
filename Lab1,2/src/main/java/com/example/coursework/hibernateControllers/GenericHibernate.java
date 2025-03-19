@@ -7,65 +7,54 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Query;
 import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.TypedQuery;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Root;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class GenericHibernate {
-    EntityManagerFactory entityManagerFactory;
-    EntityManager entityManager;
+    private final EntityManagerFactory entityManagerFactory;
+    private final EntityManager entityManager;
 
     public GenericHibernate(EntityManagerFactory entityManagerFactory) {
         this.entityManagerFactory = entityManagerFactory;
+        this.entityManager = entityManagerFactory.createEntityManager();
     }
 
-    protected EntityManager createEntityManager() {
-        return entityManagerFactory.createEntityManager();
+    public EntityManager getEntityManager() {
+        return entityManager;
     }
 
     public <T> void create(T entity) {
         try {
-            entityManager = createEntityManager();
             entityManager.getTransaction().begin();
             entityManager.persist(entity);
             entityManager.getTransaction().commit();
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            if (entityManager != null) {
-                entityManager.close();
-            }
         }
     }
 
     public <T> void update(T entity) {
         try {
-            entityManager = createEntityManager();
             entityManager.getTransaction().begin();
             entityManager.merge(entity);
             entityManager.getTransaction().commit();
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            if (entityManager != null) {
-                entityManager.close();
-            }
         }
     }
 
     public <T> void delete(Class<T> entityClass, int id) {
         try {
-            entityManager = createEntityManager();
             entityManager.getTransaction().begin();
             T publication = entityManager.find(entityClass, id);
             entityManager.remove(publication);
             entityManager.getTransaction().commit();
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            if (entityManager != null) {
-                entityManager.close();
-            }
         }
     }
 
@@ -86,7 +75,6 @@ public class GenericHibernate {
     public <T> List<T> getAllRecords(Class<T> entityClass) {
         List<T> list = new ArrayList<>();
         try {
-            entityManager = createEntityManager();
             CriteriaQuery query = entityManager.getCriteriaBuilder().createQuery();
             query.select(query.from(entityClass));
             Query q = entityManager.createQuery(query);
@@ -100,10 +88,7 @@ public class GenericHibernate {
     public <T> T getEntityById(Class<T> entityClass, int id){
         T result = null;
         try{
-            entityManager = createEntityManager();
-            entityManager.getTransaction().begin();
             result = entityManager.find(entityClass, id);
-            entityManager.getTransaction().commit();
         }catch (Exception e){
             e.printStackTrace();
         }

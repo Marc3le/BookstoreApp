@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<AnchorPane prefHeight="300.0" prefWidth="400.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.coursework.fxControllers.ReviewDialog">
+    <VBox spacing="10" AnchorPane.leftAnchor="10" AnchorPane.rightAnchor="10" AnchorPane.topAnchor="10" AnchorPane.bottomAnchor="10">
+        <Label text="Write your review:" />
+        <TextArea fx:id="reviewText" prefHeight="150.0" wrapText="true" promptText="Enter your review here..." />
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Label text="Rating:" />
+            <ChoiceBox fx:id="ratingStars" prefWidth="60.0" />
+            <Label text="stars" />
+        </HBox>
+        <HBox spacing="10" alignment="CENTER_RIGHT">
+            <Button fx:id="cancelButton" text="Cancel" onAction="#handleCancel" />
+            <Button fx:id="submitButton" text="Submit" onAction="#handleSubmit" defaultButton="true" />
+        </HBox>
+    </VBox>
+</AnchorPane> 
